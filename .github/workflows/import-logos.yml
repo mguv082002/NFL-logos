@@ -92,3 +92,5 @@ jobs:
             git commit -m "Add modern 3D NFL logos"
             git push
           fi
+
+# trigger import
