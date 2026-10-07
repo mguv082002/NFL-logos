@@ -1,0 +1,94 @@
+name: Import 3D NFL Logos
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/import-logos.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install downloader
+        run: python -m pip install --upgrade gdown
+
+      - name: Download shared Google Drive folder
+        run: |
+          mkdir -p drive-download
+          gdown --folder "https://drive.google.com/drive/folders/1cGIW_v3iTSBqOlHAaaywYXG4J54SXDHl" -O drive-download
+
+      - name: Select current 3D logos
+        shell: python
+        run: |
+          from pathlib import Path
+          import shutil
+
+          root = Path("drive-download")
+          out = Path("logos")
+          out.mkdir(exist_ok=True)
+
+          mapping = {
+              "Arizona_Cardinals.png": "ARZ 2005.png",
+              "Atlanta_Falcons.png": "ATL 2002.png",
+              "Baltimore_Ravens.png": "BAL 1999.png",
+              "Buffalo_Bills.png": "BUF 1974.png",
+              "Carolina_Panthers.png": "CAR 2012.png",
+              "Chicago_Bears.png": "CHI 2023.png",
+              "Cincinnati_Bengals.png": "CIN 2020.png",
+              "Cleveland_Browns.png": "CLE 2026.png",
+              "Dallas_Cowboys.png": "DAL 1964.png",
+              "Denver_Broncos.png": "DEN 1997.png",
+              "Detroit_Lions.png": "DET 2017.png",
+              "Green_Bay_Packers.png": "GB 1980.png",
+              "Houston_Texans.png": "HOU 2024.png",
+              "Indianapolis_Colts.png": "IND 2002.png",
+              "Jacksonville_Jaguars.png": "JAX 2013.png",
+              "Kansas_City_Chiefs.png": "KC 1972.png",
+              "Las_Vegas_Raiders.png": "LV 2020.png",
+              "Los_Angeles_Chargers.png": "LAC 2020.png",
+              "Los_Angeles_Rams.png": "LAR 2026.png",
+              "Miami_Dolphins.png": "MIA 2018.png",
+              "Minnesota_Vikings.png": "MIN 2013.png",
+              "New_England_Patriots.png": "NE 2000.png",
+              "New_Orleans_Saints.png": "NO 2012.png",
+              "New_York_Giants.png": "NYG 2000.png",
+              "New_York_Jets.png": "NYJ 2024.png",
+              "Philadelphia_Eagles.png": "PHI 1996.png",
+              "Pittsburgh_Steelers.png": "PIT 2002.png",
+              "San_Francisco_49ers.png": "SF 2009.png",
+              "Seattle_Seahawks.png": "SEA 2012.png",
+              "Tampa_Bay_Buccaneers.png": "TB 2020.png",
+              "Tennessee_Titans.png": "TEN 2026.png",
+              "Washington_Commanders.png": "WSH 2026 Alternate 2.png",
+          }
+
+          files = {p.name: p for p in root.rglob("*.png")}
+          missing = []
+          for dest, source in mapping.items():
+              src = files.get(source)
+              if not src:
+                  missing.append(source)
+                  continue
+              shutil.copy2(src, out / dest)
+
+          if missing:
+              raise SystemExit("Missing expected files: " + ", ".join(missing))
+
+      - name: Commit logos
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add logos/
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "Add modern 3D NFL logos"
+            git push
+          fi
